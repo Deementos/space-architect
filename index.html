@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Space Architect: OMEGA</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #05080f;
+            --panel-bg: rgba(11, 15, 23, 0.98);
+            --text-main: #c0cbe3;
+            /* Palette */
+            --accent: #00f3ff;
+            --tech: #00ff9d;
+            --mega: #ff9d00;
+            --void-col: #ff0055;
+            --sing: #9d00ff;
+            --gold: #ffd700;
+            --art: #ffffff;
+            --market: #ff00cc;
+            
+            --border: #2a3549;
+            --success: #00ff9d;
+            --danger: #ff4444;
+            --font-main: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            user-select: none;
+        }
+
+        /* --- EFFECTS --- */
+        .overdrive-active body { animation: glitch 0.2s infinite; }
+        .overdrive-active .game-wrapper { filter: drop-shadow(0 0 10px var(--void-col)); }
+        
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none; z-index: 999; opacity: 0.2;
+        }
+        #starfield { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; }
+
+        /* --- LAYOUT --- */
+        .top-bar { position: absolute; top: 15px; left: 15px; z-index: 100; display: flex; gap: 10px; }
+        .icon-btn { 
+            background: rgba(0,0,0,0.7); border: 1px solid #444; color: #aaa; 
+            width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 4px; font-size: 1.2em; transition: 0.2s;
+        }
+        .icon-btn:hover { border-color: var(--accent); color: #fff; background: #000; }
+
+        .game-wrapper { display: flex; width: 100%; height: 100%; position: relative; }
+
+        .left-panel {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            padding: 60px 20px 20px 20px; 
+            border-right: 1px solid var(--border);
+            background: radial-gradient(circle at 50% 40%, #0e1424 0%, var(--bg-color) 90%);
+            position: relative; z-index: 1;
+            gap: 15px;
+        }
+
+        /* --- LEFT PANEL ELEMENTS --- */
+        .resource-container { text-align: center; z-index: 5; }
+        .resource-display { font-size: 3.2em; font-weight: 800; color: #fff; text-shadow: 0 0 25px rgba(0, 243, 255, 0.3); line-height: 1.0; margin: 5px 0; }
+        .resource-label { color: var(--accent); font-size: 0.8em; letter-spacing: 2px; text-transform: uppercase; }
+        
+        .stats-micro { font-size: 0.85em; color: #7a8ba3; margin-top: 5px; display: flex; flex-direction: column; gap: 2px; }
+        .stat-tag { background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; border: 1px solid #333; }
+
+        .core-wrapper { position: relative; width: 240px; height: 240px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        #core-btn {
+            width: 160px; height: 160px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1a2639, #000);
+            border: 3px solid var(--accent);
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.3);
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #fff; font-weight: 800; position: relative; z-index: 10; 
+            transition: transform 0.05s, border-color 0.2s; letter-spacing: 1px; font-size: 1.1em;
+            user-select: none; -webkit-user-select: none;
+        }
+        #core-btn:active { transform: scale(0.94); border-color: #fff; }
+        .core-ring { position: absolute; border: 1px dashed rgba(0, 243, 255, 0.2); border-radius: 50%; pointer-events: none; }
+        
+        .controls-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 280px; gap: 10px; z-index: 5; }
+
+        .heat-container { width: 100%; }
+        .overdrive-container { width: 100%; text-align: center; }
+        
+        .overdrive-btn {
+            width: 100%; padding: 10px; background: #1a0505; border: 1px solid #522;
+            color: #733; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            cursor: not-allowed; transition: all 0.3s; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+        .overdrive-btn.ready {
+            background: var(--void-col); color: #fff; border-color: #fff; cursor: pointer;
+            animation: pulseBtn 0.5s infinite alternate; box-shadow: 0 0 20px var(--void-col);
+        }
+        @keyframes pulseBtn { from { transform: scale(1); } to { transform: scale(1.02); } }
+        .overdrive-bar { height: 4px; background: #333; margin-top: 5px; width: 100%; border-radius: 2px; overflow: hidden; }
+        .overdrive-fill { height: 100%; background: var(--void-col); width: 0%; }
+
+        .event-log {
+            width: 100%; flex-grow: 1; min-height: 100px; max-height: 200px;
+            background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 4px;
+            padding: 10px; font-size: 0.85em; display: flex; flex-direction: column; 
+            overflow-y: auto; scroll-behavior: smooth; margin-top: auto;
+        }
+        .event-log::-webkit-scrollbar { width: 4px; }
+        .event-log::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        .log-msg { margin-bottom: 4px; padding-left: 8px; border-left: 2px solid #444; opacity: 0.9; text-shadow: 1px 1px 1px #000; animation: fadeLog 0.3s forwards; flex-shrink: 0; word-wrap: break-word; }
+        @keyframes fadeLog { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .log-msg.gold { color: var(--gold); border-left-color: var(--gold); }
+        .log-msg.rare { color: var(--sing); border-left-color: var(--sing); }
+        .log-msg.danger { color: var(--danger); border-left-color: var(--danger); }
+        .log-msg.success { color: var(--success); border-left-color: var(--success); }
+        .log-msg.void { color: var(--void-col); border-left-color: var(--void-col); }
+        .log-msg.market { color: var(--market); border-left-color: var(--market); }
+        .error-flash { animation: flashRed 0.3s ease-out; }
+
+        /* --- RIGHT PANEL --- */
+        .right-panel-container {
+            position: relative; height: 100%; display: flex; z-index: 20;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .right-panel { 
+            width: 650px;
+            max-width: 95vw; height: 100%;
+            background: var(--panel-bg); border-left: 1px solid var(--border); 
+            backdrop-filter: blur(10px); display: flex; flex-direction: column;
+            overflow: hidden; box-shadow: -10px 0 50px rgba(0,0,0,0.8);
+        }
+
+        .toggle-btn {
+            position: absolute; left: -30px; top: 50%; transform: translateY(-50%);
+            width: 30px; height: 60px;
+            background: var(--panel-bg); border: 1px solid var(--border); border-right: none;
+            border-radius: 8px 0 0 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--accent); z-index: 25; font-size: 1.2em;
+        }
+        .collapsed-view .right-panel-container { transform: translateX(650px); }
+
+        .tabs { 
+            display: flex; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--border); 
+            flex-wrap: wrap; justify-content: center; flex-shrink: 0; padding: 5px;
+        }
+        .tab-btn {
+            flex: 1 1 auto; padding: 12px 10px; background: transparent; color: #667; border: none;
+            cursor: pointer; font-family: inherit; font-size: 0.75em; font-weight: 800;
+            transition: 0.2s; border-bottom: 3px solid transparent; text-transform: uppercase; white-space: nowrap; 
+        }
+        
+        .tab-btn.t-build:hover, .tab-btn.t-build.active { color: var(--accent); }
+        .tab-btn.t-build.active { border-bottom-color: var(--accent); background: rgba(0, 243, 255, 0.05); }
+        .tab-btn.t-tech:hover, .tab-btn.t-tech.active { color: var(--tech); }
+        .tab-btn.t-tech.active { border-bottom-color: var(--tech); background: rgba(0, 255, 157, 0.05); }
+        .tab-btn.t-mega:hover, .tab-btn.t-mega.active { color: var(--mega); }
+        .tab-btn.t-mega.active { border-bottom-color: var(--mega); background: rgba(255, 157, 0, 0.05); }
+        .tab-btn.t-void:hover, .tab-btn.t-void.active { color: var(--void-col); }
+        .tab-btn.t-void.active { border-bottom-color: var(--void-col); background: rgba(255, 0, 85, 0.05); }
+        .tab-btn.t-sing:hover, .tab-btn.t-sing.active { color: var(--sing); }
+        .tab-btn.t-sing.active { border-bottom-color: var(--sing); background: rgba(157, 0, 255, 0.05); }
+        .tab-btn.t-quests:hover, .tab-btn.t-quests.active { color: var(--gold); }
+        .tab-btn.t-quests.active { border-bottom-color: var(--gold); background: rgba(255, 215, 0, 0.05); }
+        .tab-btn.t-arts:hover, .tab-btn.t-arts.active { color: var(--art); }
+        .tab-btn.t-arts.active { border-bottom-color: var(--art); background: rgba(255, 255, 255, 0.05); }
+        .tab-btn.t-market:hover, .tab-btn.t-market.active { color: var(--market); }
+        .tab-btn.t-market.active { border-bottom-color: var(--market); background: rgba(255, 0, 204, 0.05); }
+
+        .panel-content { flex: 1; padding: 0; overflow-y: auto; display: none; }
+        .panel-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- UNIFIED HEADER --- */
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0));
+        }
+        .panel-header h3 { margin: 0; font-size: 1.1em; letter-spacing: 1px; text-transform: uppercase; }
+        .panel-header .sub { font-size: 0.8em; color: #778; margin-top: 5px; line-height: 1.4; }
+
+        .locked-view {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 300px; color: #666; text-align: center; padding: 20px;
+        }
+        .lock-icon { font-size: 3em; margin-bottom: 15px; opacity: 0.5; }
+        .lock-msg { color: var(--danger); font-weight: bold; font-size: 0.9em; margin-top: 10px; border: 1px solid var(--danger); padding: 5px 10px; border-radius: 4px; }
+
+        .buy-controls {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 15px; border-bottom: 1px solid #333; background: rgba(0,0,0,0.2);
+        }
+        .buy-mult-btn {
+            background: #222; border: 1px solid #444; color: #888;
+            padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8em;
+        }
+        .buy-mult-btn.active { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 10px rgba(0,243,255,0.3); }
+
+        .list-container { padding: 15px; padding-bottom: 80px; }
+        
+        .shop-item {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border); 
+            margin-bottom: 8px; padding: 12px 15px; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s; border-radius: 4px; position: relative; overflow: hidden;
+        }
+        .shop-item:hover { background: rgba(255,255,255,0.05); border-color: #667; }
+        
+        /* FIXED AFFORDABLE HIGHLIGHT */
+        .shop-item.affordable {
+            border-left: 3px solid var(--success) !important;
+            background: linear-gradient(90deg, rgba(0, 255, 157, 0.08), transparent) !important;
+            border-color: var(--success);
+        }
+        
+        .shop-item.disabled { 
+            opacity: 0.6; filter: grayscale(1); border-color: #333; 
+            pointer-events: none; background: #080808;
+        }
+        
+        .item-info { flex: 1; padding-right: 10px; }
+        .item-name { font-weight: bold; font-size: 0.95em; color: #fff; margin-bottom: 4px; }
+        .item-desc { font-size: 0.75em; color: #889; line-height: 1.3; }
+        .item-cost { color: var(--gold); font-size: 0.85em; font-weight: bold; margin-top: 6px; }
+        .item-cost.expensive { color: #ff5555; }
+        .item-count { font-size: 1.4em; font-weight: 800; color: #4a5b75; min-width: 30px; text-align: right; }
+
+        .action-btn {
+            background: transparent; border: 1px solid #555; color: #aaa;
+            padding: 6px 12px; font-family: inherit; font-size: 0.75em; font-weight: bold;
+            cursor: pointer; transition: 0.2s; border-radius: 2px;
+            white-space: nowrap; text-transform: uppercase;
+        }
+        .action-btn:hover { background: #fff; color: #000; border-color: #fff; }
+        .action-btn.btn-void { border-color: var(--void-col); color: var(--void-col); }
+        .action-btn.btn-void:hover { background: var(--void-col); color: #fff; }
+        .action-btn.btn-sing { border-color: var(--sing); color: var(--sing); }
+        .action-btn.btn-sing:hover { background: var(--sing); color: #fff; }
+        .action-btn.btn-market { border-color: var(--market); color: var(--market); }
+        .action-btn.btn-market:hover { background: var(--market); color: #fff; }
+        .action-btn.disabled { border-color: #333; color: #444; pointer-events: none; background: transparent; }
+
+        .quest-card {
+            background: #121212; border-left: 4px solid #333; padding: 15px; margin-bottom: 10px;
+        }
+        .quest-card.ready { border-color: var(--success); }
+        .quest-card.done { opacity: 0.5; border-color: #444; filter: grayscale(1); }
+        .quest-header { display: flex; justify-content: space-between; font-size: 0.9em; color: #fff; margin-bottom: 5px; }
+        .quest-reward-text { font-size: 0.8em; color: var(--gold); margin-top:5px; }
+        .quest-bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+        .quest-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+
+        .modal-overlay {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.9); z-index: 200; backdrop-filter: blur(5px);
+            align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background: #0c1019; border: 1px solid var(--accent);
+            width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 0 50px rgba(0,0,0,1); display: flex; flex-direction: column;
+        }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #111; }
+        .modal-body { padding: 20px; }
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #222; font-size: 0.9em; }
+
+        .dev-panel { display: none; margin-top: 20px; padding: 10px; border: 1px dashed var(--accent); background: rgba(0, 243, 255, 0.05); }
+        .dev-panel.active { display: block; }
+        .dev-btn { background: #222; color: var(--accent); border: 1px solid var(--accent); margin: 5px; padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 0.8em; }
+
+        .float-text { position: absolute; pointer-events: none; font-weight: 800; animation: floatUp 1s forwards; z-index: 100; text-shadow: 1px 1px 0 #000; font-size: 1.2em; }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-80px); opacity: 0; } }
+
+        .particle {
+            position: absolute; width: 6px; height: 6px; background: var(--accent);
+            border-radius: 50%; pointer-events: none; z-index: 15;
+            animation: flyParticle 0.6s ease-out forwards;
+            box-shadow: 0 0 10px var(--accent);
+        }
+        @keyframes flyParticle {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        .anomaly {
+            position: absolute; width: 45px; height: 45px; border-radius: 50%;
+            background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px var(--gold);
+            cursor: pointer; z-index: 99; animation: pulseAnom 0.6s infinite alternate;
+            display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 1.5em;
+        }
+        @keyframes pulseAnom { from { transform: scale(0.9); } to { transform: scale(1.1); } }
+
+        /* Exp Bar */
+        .expedition-status {
+            margin-top: 15px; padding: 10px; border: 1px solid #444; background: rgba(0,0,0,0.5);
+            display: none;
+        }
+        .expedition-status.active { display: block; }
+        .buff-icon { display: inline-block; padding: 2px 6px; background: var(--market); color: #000; font-size: 0.7em; border-radius: 3px; margin-right: 5px; font-weight: bold; }
+
+        @media (max-width: 768px) {
+            .game-wrapper { flex-direction: column; }
+            .left-panel { 
+                flex: none; height: 45vh; /* Немного меньше, чтобы больше места для списка */
+                border-right: none; border-bottom: 1px solid var(--border); 
+                padding: 40px 10px 10px 10px;
+                justify-content: space-evenly;
+                gap: 5px;
+            }
+            .resource-display { font-size: 2.2em; margin: 0; }
+            .core-wrapper { width: 170px; height: 170px; }
+            #core-btn { width: 100px; height: 100px; font-size: 0.9em; }
+            .core-ring { width: 130px!important; height: 130px!important; }
+            .core-wrapper .core-ring:nth-child(2) { width: 150px!important; height: 150px!important; }
+            .controls-wrapper { gap: 5px; }
+            .event-log {
+                height: 80px; min-height: 60px; font-size: 0.75em; flex-grow: 0; width: 95%;
+                background: rgba(0,0,0,0.8);
+            }
+            
+            /* --- MOBILE PANEL LOGIC --- */
+            .right-panel-container { 
+                position: absolute; bottom: 0; left: 0; width: 100%; height: 55vh; 
+                transform: translateY(0); transition: transform 0.3s; 
+            }
+            /* Hides it downwards */
+            .collapsed-view .right-panel-container { transform: translateY(calc(55vh - 40px)); }
+            
+            .right-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+            
+            /* Horizontal Arrow Button on Mobile */
+            .toggle-btn {
+                top: -30px; left: 50%; 
+                width: 80px; height: 30px; 
+                margin-left: -40px; /* Center perfectly */
+                transform: none; /* No rotation */
+                border-bottom: none; border-right: 1px solid var(--border);
+                border-radius: 8px 8px 0 0;
+            }
+            
+            .tab-btn { padding: 8px 4px; font-size: 0.65em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <canvas id="starfield"></canvas>
+
+    <div class="top-bar">
+        <button class="icon-btn" onclick="UI.toggleStats()" title="Настройки">⚙️</button>
+        <button class="icon-btn" onclick="Game.save(true)" title="Сохранить">💾</button>
+    </div>
+
+    <div class="game-wrapper" id="game-wrapper">
+        <div class="left-panel">
+            <div class="resource-container">
+                <div class="resource-label">ЭНЕРГИЯ ЯДРА</div>
+                <div id="score" class="resource-display">0.00</div>
+                <div class="stats-micro">
+                    <span class="stat-tag">Генерация: <span id="pps">0.00</span>/с</span>
+                    <span class="stat-tag" id="auto-click-tag" style="display:none; color:var(--mega)">Авто-клик: ВКЛ</span>
+                    <div id="active-buffs" style="margin-top:5px"></div>
+                </div>
+                <div id="overdrive-msg" style="color:var(--void-col); font-weight:bold; height:20px; opacity:0; font-size:0.9em; margin-top:5px;">⚠️ ПЕРЕГРУЗКА ⚠️</div>
+            </div>
+
+            <div class="core-wrapper">
+                <div class="core-ring" style="width:200px; height:200px; border-width:1px; animation: spin 10s linear infinite;"></div>
+                <div class="core-ring" style="width:230px; height:230px; border-color:rgba(189,0,255,0.3); animation: spin 20s linear infinite reverse;"></div>
+                <style>@keyframes spin{100%{transform:rotate(360deg)}}</style>
+                <div id="core-btn" onpointerdown="Game.clickCore(event)">СИНТЕЗ</div>
+            </div>
+
+            <div class="controls-wrapper">
+                <div class="heat-container">
+                    <div style="display:flex; justify-content:space-between; font-size:0.7em; color:#666; margin-bottom:2px;">
+                        <span>ТЕМПЕРАТУРА</span>
+                        <span id="heat-val">0%</span>
+                    </div>
+                    <div style="width:100%; height:4px; background:#222; border-radius:2px;">
+                        <div id="heat-bar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--danger)); transition: width 0.1s linear;"></div>
+                    </div>
+                </div>
+
+                <div class="overdrive-container">
+                    <button class="overdrive-btn" id="overdrive-btn" onclick="Game.activateOverdrive()">
+                        ЗАРЯДКА...
+                    </button>
+                    <div class="overdrive-bar"><div class="overdrive-fill" id="overdrive-fill"></div></div>
+                </div>
+            </div>
+
+            <div class="event-log" id="game-log"></div>
+        </div>
+
+        <div class="right-panel-container" id="panel-container">
+            <!-- Символ стрелки меняется через JS -->
+            <div class="toggle-btn" onclick="UI.togglePanel()">▶</div>
+
+            <div class="right-panel">
+                <div class="tabs">
+                    <button class="tab-btn t-build active" onclick="UI.tab('build')">СТРУКТУРЫ</button>
+                    <button class="tab-btn t-tech" onclick="UI.tab('tech')">НАУКА</button>
+                    <button class="tab-btn t-quests" onclick="UI.tab('quests')">ЗАДАНИЯ</button>
+                    <button class="tab-btn t-market" onclick="UI.tab('market')">РЫНОК</button>
+                    <button class="tab-btn t-void" onclick="UI.tab('void')">ПУСТОТА</button>
+                    <button class="tab-btn t-sing" onclick="UI.tab('singularity')">СИНГУЛ.</button>
+                    <button class="tab-btn t-mega" onclick="UI.tab('mega')">МЕГА</button>
+                    <button class="tab-btn t-arts" onclick="UI.tab('arts')">АРТЫ</button>
+                </div>
+
+                <div id="tab-build" class="panel-content active">
+                    <div class="panel-header" style="border-bottom-color:var(--accent)">
+                        <h3 style="color:var(--accent)">Структуры</h3>
+                        <div class="sub">Покупка генераторов энергии</div>
+                    </div>
+                    <div class="buy-controls">
+                        <span style="font-size:0.8em; color:#666; text-transform:uppercase;">Режим покупки:</span>
+                        <div style="display:flex; gap:5px;">
+                            <button class="buy-mult-btn active" id="mult-1" onclick="Game.setBuyMult(1)">x1</button>
+                            <button class="buy-mult-btn" id="mult-10" onclick="Game.setBuyMult(10)">x10</button>
+                            <button class="buy-mult-btn" id="mult-max" onclick="Game.setBuyMult('max')">MAX</button>
+                        </div>
+                    </div>
+                    <div class="list-container" id="buildings-list"></div>
+                </div>
+                
+                <div id="tab-tech" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--tech)">
+                        <h3 style="color:var(--tech)">Технологии</h3>
+                        <div class="sub">Улучшения эффективности</div>
+                    </div>
+                    <div class="list-container" id="tech-list"></div>
+                </div>
+                
+                <div id="tab-mega" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--mega)">
+                        <h3 style="color:var(--mega)">Протокол "Омега"</h3>
+                        <div class="sub">Финальные улучшения. Сохраняются вечно.</div>
+                    </div>
+                    <div id="mega-content" class="list-container"></div>
+                </div>
+                
+                <div id="tab-void" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--void-col)">
+                        <h3 style="color:var(--void-col)">Измерение Пустоты</h3>
+                        <div class="sub">
+                            Баланс: <b id="dm-amount" style="color:#fff">0</b> ТМ<br>
+                            Эффект: +2% добычи за каждую ТМ
+                        </div>
+                    </div>
+                    <div id="void-content">
+                        <!-- Content injected via JS if unlocked -->
+                    </div>
+                </div>
+
+                <div id="tab-market" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--market)">
+                        <h3 style="color:var(--market)">Черный Рынок</h3>
+                        <div class="sub">Временные усилители за энергию</div>
+                    </div>
+                    <div id="market-content">
+                         <!-- Content injected via JS if unlocked -->
+                    </div>
+                </div>
+
+                <div id="tab-singularity" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--sing)">
+                        <h3 style="color:var(--sing)">Сингулярность</h3>
+                        <div class="sub">Улучшение системы Перегрузки</div>
+                    </div>
+                    <div id="singularity-content" class="list-container"></div>
+                </div>
+
+                <div id="tab-quests" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--gold)">
+                        <h3 style="color:var(--gold)">Контракты</h3>
+                        <div class="sub">Ежедневные задания на энергию</div>
+                    </div>
+                    <div class="list-container">
+                        <div id="quests-list"></div>
+                        <button onclick="Quests.refresh(true)" class="action-btn" style="width:100%; margin-top:15px">Обновить список (1 ТМ)</button>
+                    </div>
+                </div>
+
+                <div id="tab-arts" class="panel-content">
+                    <div class="panel-header" style="border-bottom-color:var(--art)">
+                        <h3 style="color:var(--art)">Артефакты</h3>
+                        <div class="sub">Найденные аномалии</div>
+                    </div>
+                    <div class="list-container" id="artifacts-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OFFLINE MODAL -->
+    <div class="modal-overlay" id="offline-modal">
+        <div class="modal-box" style="border-color:var(--success); max-width:400px;">
+            <div class="modal-header" style="background:rgba(0,255,157,0.1);">
+                <span style="color:var(--success); font-weight:bold;">СИСТЕМА ВОССТАНОВЛЕНА</span>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div style="font-size:3em; margin-bottom:10px;">🔋</div>
+                <p>Вы отсутствовали: <b id="off-time" style="color:#fff">0с</b></p>
+                <p>Накоплено энергии (25% эфф.):</p>
+                <h2 id="off-gain" style="color:var(--success); text-shadow:0 0 10px rgba(0,255,157,0.3)">0</h2>
+                <div style="font-size:0.8em; color:#666; margin-top:10px;">(Лимит оффлайн-дохода: 4 часа)</div>
+                <button class="action-btn" style="margin-top:20px; width:100%;" onclick="document.getElementById('offline-modal').style.display='none'">ПРИНЯТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="stats-modal" onclick="if(event.target===this)UI.toggleStats()">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span style="color:var(--accent); font-weight:bold;">СИСТЕМА</span>
+                <button onclick="UI.toggleStats()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.2em">✕</button>
+            </div>
+            <div class="modal-body">
+                <h4 style="color:var(--accent); margin-top:0">СТАТИСТИКА</h4>
+                <div id="stats-body"></div>
+                
+                <h4 style="color:var(--accent); margin-top:20px; border-top:1px solid #333; padding-top:10px;">УПРАВЛЕНИЕ</h4>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn" onclick="Game.exportSave()">ЭКСПОРТ</button>
+                    <button class="action-btn" onclick="Game.importSave()">ИМПОРТ</button>
+                    <button class="action-btn" style="border-color:var(--danger); color:var(--danger)" onclick="Game.reset()">ХАРД РЕСЕТ</button>
+                    <button class="action-btn" onclick="Game.openDevConsole()">DEV</button>
+                </div>
+
+                <div id="dev-panel" class="dev-panel">
+                    <h5 style="margin:0 0 10px 0; color:var(--accent)">> ADMIN ACCESS GRANTED</h5>
+                    <button class="dev-btn" onclick="Game.earn(1000000)">+1M ENERGY</button>
+                    <button class="dev-btn" onclick="Game.data.dm+=10; Game.data.totalTM+=10; UI.update()">+10 TM</button>
+                    <button class="dev-btn" onclick="Quests.generate()">RESET QUESTS</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const AudioSys = {
+        ctx: null,
+        init() {
+            if(!this.ctx) { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            if(this.ctx.state === 'suspended') this.ctx.resume();
+        },
+        play(type) {
+            if(!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            const now = this.ctx.currentTime;
+            
+            if(type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.1);
+                osc.start(now); osc.stop(now+0.1);
+            } else if(type === 'buy') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(600, now+0.15);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.15);
+                osc.start(now); osc.stop(now+0.15);
+            } else if(type === 'error') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now+0.1);
+                osc.start(now); osc.stop(now+0.1);
+            } else if(type === 'rare') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(500, now); osc.frequency.setValueAtTime(800, now+0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now+0.4);
+                osc.start(now); osc.stop(now+0.4);
+            } else if(type === 'powerup') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(100, now); osc.frequency.linearRampToValueAtTime(400, now+0.3);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.3);
+                osc.start(now); osc.stop(now+0.3);
+            }
+        }
+    };
+
+    const CONFIG = {
+        buildings: [
+            { id: 0, name: "Квантовый Резонатор", baseCost: 25, prod: 0.6 },
+            { id: 1, name: "Ионный Синтезатор", baseCost: 350, prod: 4.0 },
+            { id: 2, name: "Молекулярная Фабрика", baseCost: 3000, prod: 18 },
+            { id: 3, name: "Вакуумный Коллектор", baseCost: 45000, prod: 85 },
+            { id: 4, name: "Астероидная База", baseCost: 500000, prod: 400 },
+            { id: 5, name: "Планетарное Ядро", baseCost: 8000000, prod: 2200 },
+            { id: 6, name: "Звездная Кузница", baseCost: 150000000, prod: 12000 },
+            { id: 7, name: "Нейтронный Извлекатель", baseCost: 2500000000, prod: 70000 },
+            { id: 8, name: "Квазарная Станция", baseCost: 50000000000, prod: 400000 },
+            { id: 9, name: "Галактическая Нейросеть", baseCost: 5000000000000, prod: 2500000 }, 
+            { id: 10, name: "Ткач Реальности", baseCost: 800000000000000, prod: 50000000 } 
+        ],
+        techs: [
+            { id: 'clk1', name: "Усиление Сервоприводов", cost: 2500, type: 'click', val: 2, desc: "Удваивает мощность клика (x2)" },
+            { id: 'bld1', name: "Стабилизация Кварков", cost: 15000, type: 'build', idx: 0, val: 2, desc: "Удваивает производство Резонаторов" },
+            { id: 'bld2', name: "Изотопное Обогащение", cost: 150000, type: 'build', idx: 1, val: 2, desc: "Удваивает производство Синтезаторов" },
+            { id: 'clk2', name: "Нейроинтерфейс v2.0", cost: 1000000, type: 'click', val: 3, desc: "Утраивает мощность клика (x3)" },
+            { id: 'glob1', name: "ИИ Оптимизация", cost: 25000000, type: 'global', val: 1.2, desc: "Увеличивает все производство на 20%" },
+            { id: 'crit1', name: "Квантовая Удача", cost: 150000000, type: 'crit', val: 5, desc: "Вероятность критической реакции +5%" },
+            { id: 'end1', name: "Матрица Времени", cost: 500000000000, type: 'global', val: 1.5, desc: "Глобальное производство x1.5" },
+            { id: 'end2', name: "Абсолютный Ноль", cost: 1000000000000, type: 'click', val: 5, desc: "Мощность клика x5" }
+        ],
+        megastructures: [
+            { id: 'mega_dyson', name: "Сфера Дайсона", desc: "Авто-синтез: 20 кликов/сек", costEnergy: 5000000000, costDM: 10 },
+            { id: 'mega_chrono', name: "Хроно-Ускоритель", desc: "Ускорение течения времени x1.5", costEnergy: 250000000000, costDM: 50 },
+            { id: 'mega_gate', name: "Врата Омега", desc: "Удваивает получение ТМ при сбросе", costEnergy: 10000000000000, costDM: 100 }
+        ],
+        voidUpgrades: [
+            { id: 'v_prod', name: "Искажение Времени", desc: "Множитель общего дохода x1.5", baseCost: 5, type: 'prod', val: 0.5 },
+            { id: 'v_crit', name: "Всевидящее Око", desc: "Вероятность критической реакции +5%", baseCost: 15, type: 'crit', val: 5, max: 10 },
+            { id: 'v_click', name: "Сила Титана", desc: "Мощность ручного синтеза +100%", baseCost: 10, type: 'click', val: 1.0 },
+        ],
+        artifacts: [
+            { id: 'a1', name: "Древний Процессор", desc: "Глобальное производство +10%", chance: 0.3, type: 'prod', val: 0.10 }, 
+            { id: 'a2', name: "Золотой Слиток", desc: "Снижение стоимости построек на 8%", chance: 0.3, type: 'cost', val: 0.08 },
+            { id: 'a3', name: "Ядро Сингулярности", desc: "Мощность клика +20%", chance: 0.2, type: 'click', val: 0.20 },
+            { id: 'a4', name: "Линза Хаоса", desc: "Вероятность критической реакции +2%", chance: 0.2, type: 'crit', val: 2 },
+            { id: 'a5', name: "Звездный Компас", desc: "Сокращает время экспедиций на 20%", chance: 0.2, type: 'exp', val: 0.8 },
+            { id: 'a6', name: "Плазменный Щит", desc: "Перегрузка длится на 3 сек дольше", chance: 0.2, type: 'overdrive', val: 3 },
+            { id: 'a7', name: "Призма Пустоты", desc: "10% шанс на двойной клик", chance: 0.1, type: 'double', val: 0.1 },
+            { id: 'a8', name: "Нейтронный Бур", desc: "Сила клика +25%", chance: 0.15, type: 'click', val: 0.25 },
+            { id: 'a9', name: "Чертеж Предтеч", desc: "Все постройки дешевле на 5%", chance: 0.15, type: 'cost', val: 0.05 },
+            { id: 'a10', name: "Грави-Генератор", desc: "Глобальное производство +15%", chance: 0.15, type: 'prod', val: 0.15 },
+            { id: 'a11', name: "Квантовый Клевер", desc: "Шанс крит. реакции +3%", chance: 0.10, type: 'crit', val: 3 },
+            { id: 'a12', name: "Варп-Двигатель", desc: "Экспедиции на 10% быстрее", chance: 0.10, type: 'exp', val: 0.9 },
+            { id: 'a13', name: "Осколок Омеги", desc: "Перегрузка длится +2 сек", chance: 0.10, type: 'overdrive', val: 2 },
+            { id: 'a14', name: "Зеркало Бездны", desc: "+5% шанс на двойной клик", chance: 0.08, type: 'double', val: 0.05 },
+            { id: 'a15', name: "Банк Памяти ИИ", desc: "Сила клика +15%", chance: 0.2, type: 'click', val: 0.15 },
+            { id: 'a16', name: "Солнечная Панель", desc: "Глобальное производство +8%", chance: 0.25, type: 'prod', val: 0.08 },
+            { id: 'a17', name: "Торговый Код", desc: "Постройки дешевле на 3%", chance: 0.2, type: 'cost', val: 0.03 }
+        ],
+        marketOffers: [
+            { id: 'buff_prod', name: "Разгон Реактора", desc: "x3 к добыче на 1 минуту", costType: 'time', costMult: 90, duration: 60, type: 'prod', val: 3 },
+            { id: 'buff_click', name: "Нейро-Стим", desc: "+50% сила клика на 3 минуты", costType: 'time', costMult: 120, duration: 180, type: 'click', val: 1.5 },
+            { id: 'buff_anom', name: "Пространственный Маяк", desc: "Аномалии появляются каждые 15 сек на 3 мин", costType: 'time', costMult: 600, duration: 180, type: 'spawn', val: 0.2 }
+        ]
+    };
+
+    /* --- MISSING QUESTS MODULE (FIXED) --- */
+    const Quests = {
+        types: ['earn', 'click', 'anomaly'],
+        generate() {
+            Game.data.quests = [];
+            for(let i=0; i<3; i++) {
+                const type = this.types[Math.floor(Math.random() * this.types.length)];
+                let goal, text, reward;
+                const pps = Math.max(10, Game.getTotalPPS());
+                
+                if(type === 'earn') {
+                    goal = Math.floor(pps * 120 * (1 + Math.random())); 
+                    text = "Синтезировать энергии";
+                    reward = goal * 0.5;
+                } else if(type === 'click') {
+                    goal = Math.floor(50 + Math.random() * 100);
+                    text = "Произвести ручной синтез";
+                    reward = pps * 60; 
+                } else if(type === 'anomaly') {
+                    goal = Math.floor(2 + Math.random() * 3);
+                    text = "Найти аномалии";
+                    reward = pps * 180;
+                }
+                Game.data.quests.push({ type, goal, current: 0, text, reward, claimed: false });
+            }
+            Game.data.lastQuestReset = Date.now();
+            UI.renderQuests();
+        },
+        checkDailyReset() {
+            const now = Date.now();
+            if (now - Game.data.lastQuestReset > 24 * 60 * 60 * 1000) {
+                this.generate();
+            }
+        },
+        progress(type, amount) {
+            if(!Game.data.quests) return;
+            let changed = false;
+            Game.data.quests.forEach(q => {
+                if(!q.claimed && q.type === type && q.current < q.goal) {
+                    q.current += amount;
+                    if(q.current > q.goal) q.current = q.goal;
+                    changed = true;
+                }
+            });
+            if(changed && UI.activeTab === 'quests') UI.renderQuests();
+        },
+        claim(idx) {
+            const q = Game.data.quests[idx];
+            if(q && q.current >= q.goal && !q.claimed) {
+                q.claimed = true;
+                Game.earn(q.reward);
+                UI.log(`Задание выполнено: +${UI.fmt(q.reward)}`, 'gold');
+                AudioSys.play('buy');
+                UI.renderQuests();
+            }
+        },
+        refresh(manual) {
+            if(manual) {
+                if(Game.data.dm >= 1) {
+                    Game.data.dm--;
+                    this.generate();
+                    UI.log("Задания обновлены", 'market');
+                } else {
+                    UI.error("Недостаточно ТМ");
+                }
+            }
+        }
+    };
+
+    const Game = {
+        data: {
+            score: 0, total: 0, dm: 0, totalTM: 0, prestigeCount: 0,
+            buildings: CONFIG.buildings.map(() => ({ count: 0 })),
+            techs: [], megas: [], voidLevels: {}, inventory: [], quests: [],
+            singularity: { dur: 0, mult: 0, cool: 0 },
+            lastSave: Date.now(), lastQuestReset: 0, version: 4.1,
+            heat: 0, overdriveCharge: 0, overdriveActive: 0,
+            marketBuffs: {}, 
+            expedition: { active: false, startTime: 0, duration: 900 } 
+        },
+        lastTime: Date.now(),
+        buyAmount: 1,
+        frameCount: 0,
+        anomalyTimeout: null,
+
+        init() {
+            this.load();
+            
+            const now = Date.now();
+            if(this.data.lastSave) {
+                const diff = (now - this.data.lastSave) / 1000;
+                if(diff > 30) {
+                    const cap = 14400; // 4 hours limit
+                    const efficiency = 0.25; 
+                    const effectiveTime = Math.min(diff, cap);
+                    const gain = this.getRawPPS() * effectiveTime * efficiency;
+                    
+                    if(gain > 0) {
+                        this.data.score += gain;
+                        this.data.total += gain;
+                        document.getElementById('off-time').innerText = UI.fmtTime(diff);
+                        document.getElementById('off-gain').innerText = UI.fmt(gain);
+                        document.getElementById('offline-modal').style.display = 'flex';
+                    }
+                }
+            }
+            
+            // Quests fix: check if exist, else generate
+            if (!this.data.quests || this.data.quests.length === 0) Quests.generate();
+            else Quests.checkDailyReset();
+            
+            for(let k in this.data.marketBuffs) {
+                if(this.data.marketBuffs[k] < now) delete this.data.marketBuffs[k];
+            }
+
+            window.addEventListener('beforeunload', () => {
+                if(Game.data) Game.save();
+            });
+
+            setInterval(() => this.sanityCheck(), 1000);
+            
+            UI.init();
+            requestAnimationFrame(() => this.loop());
+            setInterval(() => this.save(), 10000);
+            this.scheduleAnomaly();
+            UI.log("СИСТЕМА ЗАГРУЖЕНА", "success");
+        },
+
+        sanityCheck() {
+            if(!this.data) return;
+            if(isNaN(this.data.score) || this.data.score < 0) this.data.score = 0;
+            if(isNaN(this.data.dm) || this.data.dm < 0) this.data.dm = 0;
+            if(this.data.heat > 100) this.data.heat = 100;
+            if(this.data.heat < 0) this.data.heat = 0;
+            if(this.data.overdriveCharge === undefined) this.data.overdriveCharge = 0;
+            if(this.data.overdriveActive === undefined) this.data.overdriveActive = 0;
+            if(!this.data.marketBuffs) this.data.marketBuffs = {};
+            if(!this.data.expedition) this.data.expedition = { active: false, startTime: 0, duration: 900 };
+            if(!this.data.singularity) this.data.singularity = { dur: 0, mult: 0, cool: 0 };
+            if(this.data.prestigeCount === undefined) this.data.prestigeCount = 0;
+            if(this.data.totalTM === undefined) this.data.totalTM = 0;
+        },
+        
+        getOverdriveDur() { 
+            let base = 10 + (this.data.singularity.dur * 1);
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'overdrive') base += a.val; });
+            return base;
+        },
+        getOverdriveMult() { return 5 + (this.data.singularity.mult * 1); },
+        getOverdriveMax() { return Math.max(150, 300 - (this.data.singularity.cool * 5)); },
+
+        activateOverdrive() {
+            if(this.data.overdriveActive > 0) return;
+            const max = this.getOverdriveMax();
+            if(this.data.overdriveCharge >= max) {
+                this.data.overdriveCharge = 0;
+                this.data.overdriveActive = this.getOverdriveDur();
+                AudioSys.init();
+                AudioSys.play('powerup');
+                UI.log(`>>> ПЕРЕГРУЗКА x${this.getOverdriveMult()}! <<<`, "danger");
+                document.body.classList.add('overdrive-active');
+            } else {
+                UI.error("СИСТЕМА ЕЩЕ НЕ ЗАРЯЖЕНА");
+            }
+        },
+        
+        buySingularity(type, mode) {
+            const getCost = (t, l) => {
+                if(t === 'dur') return Math.floor(5 * Math.pow(1.5, l));
+                if(t === 'mult') return Math.floor(10 * Math.pow(2.0, l));
+                if(t === 'cool') return Math.floor(5 * Math.pow(1.5, l));
+                return 999999;
+            };
+
+            let bought = 0;
+            if (mode === 'max') {
+                let safety = 1000;
+                while(safety > 0) {
+                    let lvl = this.data.singularity[type];
+                    if(type === 'cool' && lvl >= 30) break; // Hard cap for cool
+                    
+                    let cost = getCost(type, lvl);
+                    if(this.data.dm >= cost) {
+                        this.data.dm -= cost;
+                        this.data.singularity[type]++;
+                        bought++;
+                        safety--;
+                    } else {
+                        break;
+                    }
+                }
+                if(bought > 0) {
+                    AudioSys.play('buy');
+                    UI.log(`Сингулярность: +${bought} ур.`, "sing");
+                    UI.renderSingularity();
+                }
+            } else {
+                let lvl = this.data.singularity[type];
+                if(type === 'cool' && lvl >= 30) return;
+                
+                let cost = getCost(type, lvl);
+                if(this.data.dm >= cost) {
+                    this.data.dm -= cost;
+                    this.data.singularity[type]++;
+                    AudioSys.play('buy');
+                    UI.log("Сингулярность улучшена", "sing");
+                    UI.renderSingularity();
+                }
+            }
+        },
+
+        getMarketCost(id) {
+            const offer = CONFIG.marketOffers.find(x => x.id === id);
+            return Math.max(100, this.getRawPPS() * offer.costMult);
+        },
+
+        buyMarketBuff(id) {
+            const offer = CONFIG.marketOffers.find(x => x.id === id);
+            let cost = this.getMarketCost(id);
+            
+            if(this.data.score < cost) return;
+            this.data.score -= cost;
+
+            this.data.marketBuffs[id] = Date.now() + (offer.duration * 1000);
+            UI.log(`РЫНОК: Активировано ${offer.name}`, 'market');
+            AudioSys.play('powerup');
+            
+            if(offer.type === 'spawn') this.scheduleAnomaly();
+        },
+
+        startExpedition() {
+            if(this.data.expedition.active) return;
+            this.data.expedition.active = true;
+            this.data.expedition.startTime = Date.now();
+            
+            let dur = 15 * 60; 
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'exp') dur *= a.val; });
+            
+            this.data.expedition.duration = dur;
+            UI.log("Зонд отправлен в экспедицию...", 'market');
+            UI.renderMarket();
+        },
+
+        claimExpedition() {
+            if(!this.data.expedition.active) return;
+            const pps = this.getRawPPS();
+            const reward = Math.max(5000, pps * 900); 
+            
+            this.earn(reward);
+            this.data.expedition.active = false;
+            UI.log(`Экспедиция вернулась: +${UI.fmt(reward)}`, 'success');
+            AudioSys.play('rare');
+            UI.renderMarket();
+        },
+
+        loop() {
+            const now = Date.now();
+            let dt = (now - this.lastTime) / 1000;
+            if(dt > 1.0) dt = 0.016; 
+            this.lastTime = now;
+            
+            for(let k in this.data.marketBuffs) {
+                if(this.data.marketBuffs[k] < now) delete this.data.marketBuffs[k];
+            }
+
+            if(this.data.heat > 0) {
+                this.data.heat -= dt * 5; 
+                if(this.data.heat < 0) this.data.heat = 0;
+            }
+
+            if(this.data.overdriveActive > 0) {
+                this.data.overdriveActive -= dt;
+                if(this.data.overdriveActive <= 0) {
+                    this.data.overdriveActive = 0;
+                    document.body.classList.remove('overdrive-active');
+                    UI.log("Система охлаждается...", "gold");
+                }
+            } else {
+                const max = this.getOverdriveMax();
+                if(this.data.overdriveCharge < max) {
+                    this.data.overdriveCharge += dt;
+                    if(this.data.overdriveCharge > max) this.data.overdriveCharge = max;
+                }
+            }
+
+            const speed = this.data.megas.includes('mega_chrono') ? 1.5 : 1.0;
+            const pps = this.getTotalPPS();
+            if(pps > 0) this.earn(pps * dt * speed);
+            if(this.data.megas.includes('mega_dyson')) {
+    const heatMult = 1 + (this.data.heat / 100);
+    this.earn(this.getClickPower() * heatMult * 20 * dt * speed);
+}
+            
+            this.frameCount++;
+            if(this.frameCount % 5 === 0) UI.update();
+            requestAnimationFrame(() => this.loop());
+        },
+
+        earn(amount) {
+            if (isNaN(amount) || amount < 0) return;
+            this.data.score += amount;
+            this.data.total += amount;
+            Quests.progress('earn', amount);
+        },
+
+        getRawPPS() {
+            let glob = 1 + (this.data.dm * 0.02); // 2% per TM
+            if (this.data.voidLevels['v_prod']) glob *= (1 + this.data.voidLevels['v_prod'] * 0.5); 
+            this.data.techs.forEach(t => { const tech = CONFIG.techs.find(x=>x.id===t); if(tech && tech.type === 'global') glob *= tech.val; });
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'prod') glob += a.val; });
+            
+            let pps = 0;
+            this.data.buildings.forEach((b, i) => {
+                let prod = CONFIG.buildings[i].prod;
+                this.data.techs.forEach(tid => {
+                    const t = CONFIG.techs.find(x => x.id === tid);
+                    if(t && t.type === 'build' && t.idx === i) prod *= t.val;
+                });
+                pps += b.count * prod;
+            });
+            
+            return pps * glob;
+        },
+
+        getTotalPPS() {
+            let pps = this.getRawPPS();
+            
+            for(let k in this.data.marketBuffs) {
+                const offer = CONFIG.marketOffers.find(x => x.id === k);
+                if(offer && offer.type === 'prod') pps *= offer.val;
+            }
+
+            if (this.data.overdriveActive > 0) pps *= this.getOverdriveMult(); 
+            return pps;
+        },
+
+        getClickPower(isCrit) {
+            let val = Math.max(1, this.getRawPPS() * 0.01); 
+            
+            this.data.techs.forEach(t => { const tech = CONFIG.techs.find(x=>x.id===t); if(tech && tech.type === 'click') val *= tech.val; });
+            if (this.data.voidLevels['v_click']) val *= (1 + this.data.voidLevels['v_click'] * 1.0); 
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'click') val *= (1 + a.val); });
+            
+            for(let k in this.data.marketBuffs) {
+                const offer = CONFIG.marketOffers.find(x => x.id === k);
+                if(offer && offer.type === 'click') val *= offer.val;
+            }
+
+            if(isCrit) val *= 5;
+            if (this.data.overdriveActive > 0) val *= this.getOverdriveMult();
+
+            return val;
+        },
+
+        clickCore(e) {
+            AudioSys.init();
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            
+            this.data.heat = Math.min(100, (this.data.heat||0) + 2);
+            const heatMult = 1 + (this.data.heat / 100);
+            const critChance = 1 + (this.data.voidLevels['v_crit']||0)*5 + this.getArtCritBonus();
+            const isCrit = Math.random()*100 < critChance;
+            let val = this.getClickPower(isCrit) * heatMult; 
+            
+            let doubleClick = false;
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'double' && Math.random() < a.val) doubleClick = true; });
+            if(doubleClick) val *= 2;
+
+            this.earn(val);
+            Quests.progress('click', 1);
+            AudioSys.play('click');
+            if(e) {
+                const touch = e.touches ? e.touches[0] : e;
+                const color = this.data.overdriveActive > 0 ? '#ff00ff' : (isCrit ? '#ff0055' : (doubleClick ? '#00f3ff' : '#fff'));
+                UI.floatText(touch.clientX, touch.clientY, `+${UI.fmt(val)}`, color);
+                UI.spawnParticles(touch.clientX, touch.clientY);
+            }
+        },
+
+        getArtCritBonus() {
+            let b = 0;
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a.type === 'crit') b += a.val; });
+            return b;
+        },
+
+        getBuyDetails(idx) {
+            const b = CONFIG.buildings[idx];
+            const current = this.data.buildings[idx].count;
+            const basePrice = b.baseCost;
+            const growth = 1.28; 
+            
+            let discount = 0;
+            this.data.inventory.forEach(id => { const a = CONFIG.artifacts.find(x => x.id === id); if(a && a.type === 'cost') discount += a.val; });
+            const mult = 1 - Math.min(0.75, discount);
+            const P = basePrice * mult;
+            const r = growth;
+
+            const getCostForK = (k) => {
+                return Math.floor(P * Math.pow(r, current) * (Math.pow(r, k) - 1) / (r - 1));
+            };
+
+            let cost = 0, amount = 0;
+
+            if (this.buyAmount === 1) {
+                amount = 1; 
+                cost = Math.floor(P * Math.pow(r, current));
+            } else if (this.buyAmount === 10) {
+                amount = 10;
+                cost = getCostForK(10);
+            } else if (this.buyAmount === 'max') {
+                const A = P * Math.pow(r, current);
+                if(A > this.data.score) {
+                    amount = 1; 
+                    cost = Math.floor(A); 
+                } else {
+                    const B = this.data.score * (r - 1);
+                    const k = Math.floor(Math.log(B / A + 1) / Math.log(r));
+                    amount = Math.max(1, k);
+                    cost = getCostForK(amount);
+                }
+            }
+            return { cost, amount };
+        },
+
+        buyBuilding(idx) {
+            AudioSys.init();
+            const { cost, amount } = this.getBuyDetails(idx);
+            const b = CONFIG.buildings[idx];
+            if(this.data.score >= cost) {
+                this.data.score -= cost;
+                this.data.buildings[idx].count += amount;
+                AudioSys.play('buy');
+                UI.log(`Построено: ${b.name} (x${amount})`, "success");
+                UI.renderBuilds();
+                UI.update(); // Update locks
+            }
+        },
+
+        setBuyMult(val) {
+            this.buyAmount = val;
+            document.querySelectorAll('.buy-mult-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('mult-'+val).classList.add('active');
+            UI.renderBuilds();
+        },
+
+        buyTech(id) {
+            AudioSys.init();
+            const t = CONFIG.techs.find(x=>x.id===id);
+            if(this.data.score >= t.cost) {
+                this.data.score -= t.cost;
+                this.data.techs.push(id);
+                UI.log(`Изучено: ${t.name}`, 'gold');
+                AudioSys.play('buy');
+                UI.renderTechs();
+            }
+        },
+
+        buyMega(id) {
+            if(this.data.megas.includes(id)) return;
+            const m = CONFIG.megastructures.find(x=>x.id===id);
+            if (!m) return;
+            if(this.data.score >= m.costEnergy && this.data.dm >= m.costDM) {
+                this.data.score -= m.costEnergy; this.data.dm -= m.costDM;
+                this.data.megas.push(id);
+                AudioSys.play('rare');
+                UI.log(`МЕГАПРОЕКТ: ${m.name}`, "rare");
+                UI.renderMegas();
+            }
+        },
+
+        buyVoid(id) {
+            const v = CONFIG.voidUpgrades.find(x=>x.id===id);
+            const lvl = this.data.voidLevels[id] || 0;
+            if(v.max && lvl >= v.max) return;
+            const cost = v.baseCost * (lvl+1);
+            if(this.data.dm >= cost) {
+                this.data.dm -= cost;
+                this.data.voidLevels[id] = lvl + 1;
+                AudioSys.play('buy');
+                UI.log(`Пустота: ${v.name} (Ур.${lvl+1})`, "void");
+                UI.renderVoid();
+            }
+        },
+
+        scheduleAnomaly() {
+            if (this.anomalyTimeout) clearTimeout(this.anomalyTimeout);
+            
+            let delay = Math.random() * 60000 + 60000; // Normal: 60-120s
+            // Check for Beacon buff
+            if (this.data.marketBuffs['buff_anom'] > Date.now()) {
+                delay = 15000; // Beacon: 15s
+            }
+            
+            this.anomalyTimeout = setTimeout(() => { this.spawnAnomaly(); this.scheduleAnomaly(); }, delay);
+        },
+
+        spawnAnomaly() {
+            const el = document.createElement('div');
+            el.className = 'anomaly'; el.innerText = "?";
+            el.style.left = Math.min(window.innerWidth - 60, Math.max(20, Math.random()*window.innerWidth)) + 'px';
+            el.style.top = Math.min(window.innerHeight - 60, Math.max(60, Math.random()*window.innerHeight)) + 'px';
+            
+            el.onmousedown = (e) => {
+                AudioSys.init(); e.stopPropagation();
+                const rew = Math.max(1000, this.getTotalPPS() * 45);
+                this.earn(rew);
+                UI.log(`Аномалия: +${UI.fmt(rew)}`, 'gold');
+                UI.floatText(e.clientX, e.clientY, `+${UI.fmt(rew)}`, '#ffd700');
+                AudioSys.play('rare');
+                Quests.progress('anomaly', 1);
+                
+                if (this.data.inventory.length === 0 || Math.random() < 0.25) {
+                    this.findArtifact();
+                }
+                el.remove();
+            };
+            document.body.appendChild(el);
+            setTimeout(() => { if(el.parentNode) el.remove(); }, 6000);
+        },
+
+        findArtifact() {
+            const allIds = CONFIG.artifacts.map(a => a.id);
+            const ownedIds = this.data.inventory;
+            const missing = CONFIG.artifacts.filter(a => !ownedIds.includes(a.id));
+
+            if (missing.length > 0) {
+                const art = missing[Math.floor(Math.random() * missing.length)];
+                this.data.inventory.push(art.id);
+                UI.log(`АРТЕФАКТ: ${art.name}`, 'rare');
+            } else {
+                this.earn(this.getTotalPPS() * 100);
+                UI.log("Дубликат артефакта. Компенсация.", 'rare');
+            }
+            UI.renderArts();
+        },
+
+        getPrestigePending() {
+            if(this.data.total < 1000000) return 0;
+            let amount = Math.floor(Math.sqrt(this.data.total / 1000000));
+            if(this.data.megas.includes('mega_gate')) amount *= 2;
+            return amount;
+        },
+
+        doPrestige() {
+            const gain = this.getPrestigePending();
+            if(gain <= 0) return;
+            if(!confirm(`СБРОС СИСТЕМЫ:\nВы потеряете постройки и энергию.\nВы получите +${gain} ТМ на баланс.\n\nПродолжить?`)) return;
+            
+            // SAVE PERMANENT DATA
+            const newDM = this.data.dm + gain;
+            const newTotalTM = this.data.totalTM + gain;
+            const newPrestigeCount = this.data.prestigeCount + 1;
+            const savedInventory = [...this.data.inventory];
+            const savedMegas = [...this.data.megas]; // Megas are permanent too
+            const savedVoid = {...this.data.voidLevels};
+            const savedSing = {...this.data.singularity};
+
+            // RESET EVERYTHING ELSE
+            this.data = {
+                score: 0, total: 0, 
+                dm: newDM, totalTM: newTotalTM, prestigeCount: newPrestigeCount,
+                buildings: CONFIG.buildings.map(() => ({ count: 0 })),
+                techs: [], 
+                megas: savedMegas, 
+                voidLevels: savedVoid, 
+                inventory: savedInventory, 
+                quests: [],
+                singularity: savedSing,
+                lastSave: Date.now(), lastQuestReset: 0, version: 4.1,
+                heat: 0, overdriveCharge: 0, overdriveActive: 0,
+                marketBuffs: {}, 
+                expedition: { active: false, startTime: 0, duration: 900 }
+            };
+            
+            this.save();
+            location.reload();
+        },
+
+        save(manual) {
+            if(!this.data) return;
+            this.data.lastSave = Date.now();
+            try {
+                localStorage.setItem('SpaceOmega_MEGA', JSON.stringify(this.data));
+                if(manual) { UI.log("Игра сохранена", "success"); AudioSys.play('buy'); }
+            } catch(e) {
+                if(manual) alert("Ошибка сохранения! Возможно, место на диске заполнено.");
+            }
+        },
+
+        load() {
+            const s = localStorage.getItem('SpaceOmega_MEGA');
+            if(s) {
+                try {
+                    const d = JSON.parse(s);
+                    // MERGE DEEP to preserve new flags if old save exists
+                    this.data = { ...this.data, ...d };
+                    
+                    // Arrays merge weirdly, so ensure buildings length is correct
+                    if(this.data.buildings.length < CONFIG.buildings.length) {
+                        for(let i = this.data.buildings.length; i < CONFIG.buildings.length; i++) {
+                            this.data.buildings.push({ count: 0 });
+                        }
+                    }
+                    // Fix undefined values from old saves
+                    if(this.data.heat === undefined) this.data.heat = 0;
+                    if(this.data.prestigeCount === undefined) this.data.prestigeCount = 0;
+                    if(this.data.totalTM === undefined) this.data.totalTM = 0;
+                    
+                } catch(e) {
+                    console.error("Save file corrupted, using default.");
+                }
+            }
+        },
+        exportSave() { 
+            const data = btoa(JSON.stringify(this.data));
+            try {
+                navigator.clipboard.writeText(data).then(() => {
+                    alert("Скопировано в буфер обмена!");
+                }).catch(err => {
+                    prompt("Ошибка авто-копирования. Скопируйте вручную:", data);
+                });
+            } catch (e) {
+                prompt("Скопируйте ваш код сохранения:", data);
+            }
+        },
+        importSave() { const s = prompt("Вставьте код сохранения:"); if(s) { try { this.data=JSON.parse(atob(s)); this.save(); location.reload(); } catch(e){alert("Ошибка: Неверный код");} } },
+        reset() { 
+            if(confirm("Удалить ВЕСЬ прогресс?\nЭто действие нельзя отменить.")) { 
+                this.data = null; // Prevent overwrite
+                localStorage.removeItem('SpaceOmega_MEGA'); 
+                window.location.reload(); 
+            } 
+        },
+        openDevConsole() {
+            const pass = prompt("ENTER ADMIN PASSWORD:");
+            if(pass === '18+gay') {
+                document.getElementById('dev-panel').classList.add('active');
+                UI.log("ACCESS GRANTED", "success");
+            } else {
+                UI.log("ACCESS DENIED", "danger");
+            }
+        }
+    };
+
+    const UI = {
+        collapsed: false,
+        activeTab: 'build',
+        init() { 
+            this.renderBuilds(); this.renderTechs(); this.renderMegas(); 
+            this.renderVoid(); this.renderArts(); this.renderQuests(); 
+            this.renderSingularity(); this.renderMarket();
+            this.updateToggleButton();
+        },
+        
+        fmt(n) {
+            if (n === Infinity) return "INF";
+            if (isNaN(n) || n < 0) return "0.00";
+            if (n < 1000) return n.toFixed(2);
+            
+            const s = ["", "k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Od", "Nd", "Vg"];
+            const i = Math.floor(Math.log10(n) / 3);
+            
+            if (i < s.length) return (n / Math.pow(1000, i)).toFixed(2) + s[i];
+            return n.toExponential(2).replace('+', '');
+        },
+        fmtInt(n) {
+            if(n<1000) return Math.floor(n).toString();
+            return this.fmt(n);
+        },
+        fmtTime(sec) {
+            if(sec < 60) return Math.floor(sec) + "с";
+            if(sec < 3600) return Math.floor(sec/60) + "м";
+            return (sec/3600).toFixed(1) + "ч";
+        },
+
+        error(msg) {
+            const w = document.getElementById('game-wrapper');
+            w.classList.remove('error-flash');
+            void w.offsetWidth; 
+            w.classList.add('error-flash');
+        },
+
+        spawnParticles(x, y) {
+            for(let i=0; i<6; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 50 + Math.random() * 50;
+                const tx = Math.cos(angle) * dist + 'px';
+                const ty = Math.sin(angle) * dist + 'px';
+                
+                p.style.setProperty('--tx', tx);
+                p.style.setProperty('--ty', ty);
+                
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 600);
+            }
+        },
+
+        isUnlocked(tab) {
+            if(tab === 'market') return Game.data.buildings[3].count > 0;
+            if(tab === 'singularity') return Game.data.prestigeCount > 0;
+            if(tab === 'void') return Game.data.total >= 1000000;
+            if(tab === 'mega') return Game.data.totalTM >= 5;
+            return true;
+        },
+
+        renderLocked(tab, msg) {
+            return `
+            <div class="locked-view">
+                <div class="lock-icon">🔒</div>
+                <div>Доступ заблокирован</div>
+                <div class="lock-msg">Требуется: ${msg}</div>
+            </div>`;
+        },
+
+        update() {
+            if (!Game.data) return;
+            document.getElementById('score').innerText = this.fmt(Game.data.score);
+            document.getElementById('pps').innerText = this.fmt(Game.getTotalPPS());
+
+            const acTag = document.getElementById('auto-click-tag');
+            if(Game.data.megas.includes('mega_dyson')) acTag.style.display = 'inline-block';
+            else acTag.style.display = 'none';
+
+            const buffsDiv = document.getElementById('active-buffs');
+            if(buffsDiv) {
+                buffsDiv.innerHTML = "";
+                for(let k in Game.data.marketBuffs) {
+                    const end = Game.data.marketBuffs[k];
+                    const left = Math.ceil((end - Date.now())/1000);
+                    if(left > 0) {
+                        const offer = CONFIG.marketOffers.find(x => x.id === k);
+                        buffsDiv.innerHTML += `<div class="stat-tag" style="color:var(--market)">${offer.name}: ${this.fmtTime(left)}</div>`;
+                    }
+                }
+            }
+            
+            // Render Locks & Updates for conditional tabs
+            if(this.activeTab === 'market') {
+                if(!this.isUnlocked('market')) {
+                    document.getElementById('market-content').innerHTML = this.renderLocked('market', '1 Вакуумный Коллектор');
+                } else {
+                    // Update buttons
+                    CONFIG.marketOffers.forEach(offer => {
+                        const el = document.getElementById('market-btn-'+offer.id);
+                        if(el) {
+                            const active = Game.data.marketBuffs[offer.id] > Date.now();
+                            if(active) {
+                                el.classList.add('disabled');
+                                el.innerText = "АКТИВНО";
+                            } else {
+                                el.classList.remove('disabled');
+                                let cost = Game.getMarketCost(offer.id);
+                                el.innerText = this.fmt(cost) + " Эн";
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if(this.activeTab === 'void') {
+                if(!this.isUnlocked('void')) {
+                    document.getElementById('void-content').innerHTML = this.renderLocked('void', '1.00M Энергии (Всего)');
+                } else {
+                    // Make sure content is visible
+                    if(!document.getElementById('void-shop-list')) {
+                        // Re-render layout
+                        this.renderVoid();
+                    }
+                    
+                    const pend = Game.getPrestigePending();
+                    const curTM = Math.floor(Math.sqrt(Game.data.total / 1000000));
+                    const nextTM = curTM + 1;
+                    const nextTMCost = Math.pow(nextTM, 2) * 1000000;
+                    
+                    document.getElementById('dm-amount').innerText = Game.data.dm;
+                    document.getElementById('dm-pending').innerText = pend;
+                    if(document.getElementById('next-tm-cost')) document.getElementById('next-tm-cost').innerText = this.fmt(nextTMCost);
+                    
+                    const pBtn = document.getElementById('prestige-btn');
+                    if(pBtn) pBtn.disabled = (pend <= 0);
+
+                    let prev = Math.pow(curTM, 2) * 1000000;
+                    let progress = (Game.data.total - prev) / (nextTMCost - prev);
+                    const tmBar = document.getElementById('tm-bar');
+                    if(tmBar) tmBar.style.width = (Math.max(0, Math.min(1, progress)) * 100) + "%";
+                }
+            }
+
+            if(this.activeTab === 'singularity') {
+                 if(!this.isUnlocked('singularity')) return;
+                 
+                 const types = ['dur', 'mult', 'cool'];
+                 types.forEach(t => {
+                     const btn = document.getElementById(`sing-btn-${t}`);
+                     const btnMax = document.getElementById(`sing-btn-max-${t}`);
+                     if(btn) {
+                        let cost = 0;
+                        const lvl = Game.data.singularity[t];
+                        if(t === 'dur') cost = Math.floor(5 * Math.pow(1.5, lvl));
+                        if(t === 'mult') cost = Math.floor(10 * Math.pow(2.0, lvl));
+                        if(t === 'cool') cost = Math.floor(5 * Math.pow(1.5, lvl));
+                        
+                        const cap = (t === 'cool' && lvl >= 30);
+                        if(cap) {
+                             btn.classList.add('disabled'); btn.innerText = "MAX";
+                             if(btnMax) btnMax.classList.add('disabled');
+                        } else if(Game.data.dm < cost) {
+                            btn.classList.add('disabled');
+                            if(btnMax) btnMax.classList.add('disabled');
+                        } else {
+                            btn.classList.remove('disabled');
+                            if(btnMax) btnMax.classList.remove('disabled');
+                        }
+                     }
+                 });
+            }
+            
+            if(Game.data.expedition.active) {
+                const elapsed = (Date.now() - Game.data.expedition.startTime) / 1000;
+                const left = Math.max(0, Game.data.expedition.duration - elapsed);
+                const el = document.getElementById('exp-timer');
+                if(el) el.innerText = this.fmtTime(left);
+                
+                if(left <= 0) {
+                    if(document.getElementById('btn-start-exp')) document.getElementById('btn-start-exp').style.display='none';
+                    if(document.getElementById('expedition-status')) {
+                        document.getElementById('expedition-status').style.display='block';
+                        document.getElementById('expedition-status').querySelector('div').innerText = "СТАТУС: ПРИБЫЛ";
+                        document.getElementById('expedition-status').querySelector('div').style.color = "var(--success)";
+                        document.getElementById('btn-claim-exp').style.display='block';
+                    }
+                } else {
+                     if(document.getElementById('btn-start-exp')) document.getElementById('btn-start-exp').style.display='none';
+                     if(document.getElementById('expedition-status')) {
+                         document.getElementById('expedition-status').style.display='block';
+                         document.getElementById('btn-claim-exp').style.display='none';
+                     }
+                }
+            } else {
+                if(document.getElementById('expedition-status')) document.getElementById('expedition-status').style.display = 'none';
+                if(document.getElementById('btn-start-exp')) document.getElementById('btn-start-exp').style.display = 'block';
+            }
+
+            const h = Game.data.heat || 0;
+            const bar = document.getElementById('heat-bar');
+            if(bar) {
+                bar.style.width = h + '%';
+                const hVal = document.getElementById('heat-val');
+                hVal.innerText = Math.floor(h) + '%';
+                hVal.style.color = h > 80 ? 'var(--danger)' : '#666';
+            }
+
+            const odBtn = document.getElementById('overdrive-btn');
+            const odFill = document.getElementById('overdrive-fill');
+            const odMsg = document.getElementById('overdrive-msg');
+            const max = Game.getOverdriveMax();
+
+            if(Game.data.overdriveActive > 0) {
+                odBtn.innerText = "АКТИВНО: " + Math.ceil(Game.data.overdriveActive) + "с";
+                odBtn.classList.remove('ready');
+                odFill.style.width = '100%';
+                odFill.style.backgroundColor = '#fff';
+                odMsg.innerText = `⚠️ ПЕРЕГРУЗКА x${Game.getOverdriveMult()} ⚠️`;
+                odMsg.style.opacity = 1;
+            } else {
+                odMsg.style.opacity = 0;
+                const pct = (Game.data.overdriveCharge / max) * 100;
+                if(pct >= 100) {
+                    odBtn.innerText = ">>> АКТИВИРОВАТЬ <<<";
+                    odBtn.classList.add('ready');
+                    odFill.style.width = '100%';
+                    odFill.style.backgroundColor = 'var(--void-col)';
+                } else {
+                    odBtn.innerText = "ЗАРЯДКА... " + Math.floor(pct) + "%";
+                    odBtn.classList.remove('ready');
+                    odFill.style.width = pct + "%";
+                    odFill.style.backgroundColor = 'var(--void-col)';
+                }
+            }
+
+            if(this.activeTab === 'build') {
+                CONFIG.buildings.forEach((b, i) => {
+                    if(document.getElementById(`b-row-${i}`)) {
+                        const { cost, amount } = Game.getBuyDetails(i);
+                        const elCost = document.getElementById(`b-cost-${i}`);
+                        const elProd = document.getElementById(`b-prod-${i}`);
+                        
+                        elCost.innerText = `${this.fmt(cost)} ${amount>1 ? '(x'+amount+')' : ''}`;
+                        if(elProd) elProd.innerText = `Производит: ${this.fmt(Game.getTotalPPS() > 0 ? CONFIG.buildings[i].prod * (Game.getTotalPPS()/Game.getRawPPS()) : CONFIG.buildings[i].prod)}/с`;
+
+                        const el = document.getElementById(`b-row-${i}`);
+                        if(Game.data.score >= cost) { 
+                            el.classList.remove('disabled'); 
+                            el.classList.add('affordable'); 
+                            elCost.classList.remove('expensive'); 
+                        } 
+                        else { 
+                            el.classList.add('disabled'); 
+                            el.classList.remove('affordable');
+                            elCost.classList.add('expensive'); 
+                        }
+                        document.getElementById(`b-count-${i}`).innerText = Game.data.buildings[i].count;
+                    }
+                });
+            }
+            else if(this.activeTab === 'tech') {
+                CONFIG.techs.forEach(t => {
+                    const el = document.getElementById(`tech-item-${t.id}`);
+                    if(el) {
+                        const can = Game.data.score >= t.cost;
+                        if(can) { 
+                            el.classList.remove('disabled'); 
+                            el.classList.add('affordable');
+                            el.querySelector('.item-cost').classList.remove('expensive'); 
+                        }
+                        else { 
+                            el.classList.add('disabled'); 
+                            el.classList.remove('affordable');
+                            el.querySelector('.item-cost').classList.add('expensive'); 
+                        }
+                    }
+                });
+            }
+            else if(this.activeTab === 'mega') {
+                if(this.isUnlocked('mega')) {
+                    CONFIG.megastructures.forEach(m => {
+                        const el = document.getElementById(`mega-item-${m.id}`);
+                        if(el && !Game.data.megas.includes(m.id)) {
+                            const can = Game.data.score >= m.costEnergy && Game.data.dm >= m.costDM;
+                            if(can) { 
+                                el.classList.remove('disabled');
+                                el.classList.add('affordable');
+                                el.querySelector('.item-cost').classList.remove('expensive'); 
+                            }
+                            else { 
+                                el.classList.add('disabled'); 
+                                el.classList.remove('affordable');
+                                el.querySelector('.item-cost').classList.add('expensive'); 
+                            }
+                        }
+                    });
+                }
+            }
+            else if(this.activeTab === 'void') {
+                // Handled above in void block
+                if(this.isUnlocked('void')) {
+                     CONFIG.voidUpgrades.forEach(v => {
+                        const el = document.getElementById(`void-item-${v.id}`);
+                        if(el) {
+                            const lvl = Game.data.voidLevels[v.id] || 0;
+                            const cost = v.baseCost * (lvl+1);
+                            const max = v.max && lvl >= v.max;
+                            const can = Game.data.dm >= cost && !max;
+                            const btn = el.querySelector('button');
+                            if(can) { el.classList.remove('disabled'); btn.classList.remove('disabled'); }
+                            else if(!max) { el.classList.add('disabled'); btn.classList.add('disabled'); }
+                        }
+                    });
+                }
+            }
+            else if(this.activeTab === 'quests') {
+                const list = document.getElementById('quests-list');
+                if(list.innerHTML === "") this.renderQuests();
+
+                Game.data.quests.forEach((q, i) => {
+                    const elCurr = document.getElementById(`q-curr-${i}`);
+                    const elFill = document.getElementById(`q-fill-${i}`);
+                    const elCard = document.getElementById(`quest-card-${i}`);
+                    const elBtnArea = document.getElementById(`q-btn-area-${i}`);
+
+                    if(elCurr && elFill && elCard) {
+                        elCurr.innerText = this.fmtInt(q.current);
+                        const p = Math.min(100, (q.current/q.goal)*100);
+                        elFill.style.width = p + "%";
+
+                        const done = q.current >= q.goal;
+                        const hasReadyClass = elCard.classList.contains('ready');
+                        const hasDoneClass = elCard.classList.contains('done');
+                        const hasBtn = elBtnArea.innerHTML !== "";
+
+                        if ((done && !hasReadyClass && !q.claimed) || (q.claimed && !hasDoneClass) || (done && !q.claimed && !hasBtn)) {
+                            document.getElementById('quests-list').innerHTML = ""; 
+                            this.renderQuests(); 
+                        }
+                    }
+                });
+            }
+        },
+
+        renderBuilds() {
+            const c = document.getElementById('buildings-list');
+            if(!c) return; c.innerHTML = "";
+            CONFIG.buildings.forEach((b, i) => {
+                // Pre-calc cost to avoid "..."
+                const { cost, amount } = Game.getBuyDetails(i);
+                
+                c.innerHTML += `
+                <div class="shop-item" id="b-row-${i}" onclick="Game.buyBuilding(${i})">
+                    <div class="item-info">
+                        <div class="item-name">${b.name}</div>
+                        <div class="item-desc" id="b-prod-${i}">Производит: ${this.fmt(CONFIG.buildings[i].prod)}/с</div>
+                        <div class="item-cost" id="b-cost-${i}">${this.fmt(cost)}</div>
+                    </div>
+                    <div class="item-count" id="b-count-${i}">${Game.data.buildings[i].count}</div>
+                </div>`;
+            });
+        },
+        renderTechs() {
+            const c = document.getElementById('tech-list'); c.innerHTML = ""; let cnt=0;
+            CONFIG.techs.forEach(t => {
+                if(!Game.data.techs.includes(t.id)) {
+                    cnt++;
+                    c.innerHTML += `<div class="shop-item" id="tech-item-${t.id}" onclick="Game.buyTech('${t.id}')">
+                        <div class="item-info">
+                            <div class="item-name" style="color:var(--accent)">${t.name}</div>
+                            <div class="item-desc">${t.desc}</div>
+                            <div class="item-cost">${this.fmt(t.cost)} Эн</div>
+                        </div>
+                    </div>`;
+                }
+            });
+            if(!cnt) c.innerHTML = "<div style='text-align:center;padding:20px;color:#555'>Все исследования завершены</div>";
+        },
+        renderMegas() {
+            const c = document.getElementById('mega-content'); 
+            if(!this.isUnlocked('mega')) {
+                 c.innerHTML = this.renderLocked('mega', '5 ТМ (Всего)');
+                 return;
+            }
+            c.innerHTML = "";
+            CONFIG.megastructures.forEach(m => {
+                const bought = Game.data.megas.includes(m.id);
+                c.innerHTML += `<div class="shop-item ${bought?'disabled':''}" id="mega-item-${m.id}" onclick="Game.buyMega('${m.id}')">
+                    <div class="item-info"><div class="item-name" style="color:${bought?'var(--success)':'var(--mega)'}">${m.name} ${bought?'[OK]':''}</div><div class="item-desc">${m.desc}</div>
+                    ${!bought ? `<div class="item-cost">${this.fmt(m.costEnergy)} Эн + ${m.costDM} ТМ</div>`:''}</div></div>`;
+            });
+        },
+        renderVoid() {
+            if(!this.isUnlocked('void')) {
+                document.getElementById('void-content').innerHTML = this.renderLocked('void', '1.00M Энергии (Всего)');
+                return;
+            }
+            // Inject layout if missing
+            if(!document.getElementById('void-shop-list')) {
+                document.getElementById('void-content').innerHTML = `
+                    <div style="padding:15px; border-bottom:1px solid #333;">
+                        <div style="background:#222; height:8px; border-radius:4px; margin-bottom:10px; overflow:hidden;">
+                            <div id="tm-bar" style="height:100%; background:var(--void-col); width:0%"></div>
+                        </div>
+                        <div style="font-size:0.8em; color:#888; text-align:center; margin-bottom:10px;">
+                            Сброс даст: <span id="dm-pending" style="color:var(--success); font-weight:bold">0</span> ТМ<br>
+                            (След. ТМ при: <span id="next-tm-cost">1.00M</span> Всего Эн.)
+                        </div>
+                        <button onclick="Game.doPrestige()" id="prestige-btn" class="action-btn btn-void" style="width:100%; padding:10px;">СБРОСИТЬ ПРОГРЕСС</button>
+                    </div>
+                    <div class="list-container" id="void-shop-list"></div>
+                `;
+            }
+            
+            const c = document.getElementById('void-shop-list'); c.innerHTML = "";
+            CONFIG.voidUpgrades.forEach(v => {
+                const lvl = Game.data.voidLevels[v.id] || 0;
+                const cost = v.baseCost * (lvl+1);
+                const max = v.max && lvl >= v.max;
+                
+                c.innerHTML += `<div class="shop-item" id="void-item-${v.id}" style="cursor:default">
+                    <div class="item-info"><div class="item-name" style="color:var(--void-col)">${v.name} (Ур. ${lvl})</div><div class="item-desc">${v.desc}</div></div>
+                    <button onclick="Game.buyVoid('${v.id}')" class="action-btn btn-void" style="width:auto;">${max?'MAX':cost+' ТМ'}</button>
+                </div>`;
+            });
+        },
+        renderSingularity() {
+            const c = document.getElementById('singularity-content');
+            if(!this.isUnlocked('singularity')) {
+                c.innerHTML = this.renderLocked('singularity', '1-й Сброс Системы');
+                return;
+            }
+            c.innerHTML = "";
+            
+            const lvlDur = Game.data.singularity.dur;
+            const costDur = Math.floor(5 * Math.pow(1.5, lvlDur));
+            
+            const lvlMult = Game.data.singularity.mult;
+            const costMult = Math.floor(10 * Math.pow(2.0, lvlMult));
+            
+            const lvlCool = Game.data.singularity.cool;
+            const costCool = Math.floor(5 * Math.pow(1.5, lvlCool));
+            
+            const btnStyle = "width:auto; margin-left:5px;";
+            
+            c.innerHTML += `
+            <div class="shop-item" style="cursor:default">
+                <div class="item-info">
+                    <div class="item-name" style="color:var(--sing)">Стабилизатор Ядра (Ур. ${lvlDur})</div>
+                    <div class="item-desc">Длительность Перегрузки +1 сек.</div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <button id="sing-btn-dur" onclick="Game.buySingularity('dur')" class="action-btn btn-sing" style="${btnStyle}">${costDur} ТМ</button>
+                    <button id="sing-btn-max-dur" onclick="Game.buySingularity('dur', 'max')" class="action-btn btn-sing" style="${btnStyle}">MAX</button>
+                </div>
+            </div>`;
+            
+            c.innerHTML += `
+            <div class="shop-item" style="cursor:default">
+                <div class="item-info">
+                    <div class="item-name" style="color:var(--sing)">Квантовый Усилитель (Ур. ${lvlMult})</div>
+                    <div class="item-desc">Множитель Перегрузки +x1.</div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <button id="sing-btn-mult" onclick="Game.buySingularity('mult')" class="action-btn btn-sing" style="${btnStyle}">${costMult} ТМ</button>
+                    <button id="sing-btn-max-mult" onclick="Game.buySingularity('mult', 'max')" class="action-btn btn-sing" style="${btnStyle}">MAX</button>
+                </div>
+            </div>`;
+            
+            c.innerHTML += `
+            <div class="shop-item" style="cursor:default">
+                <div class="item-info">
+                    <div class="item-name" style="color:var(--sing)">Темпоральный Насос (Ур. ${lvlCool})</div>
+                    <div class="item-desc">Ускорение зарядки (лимит -2:30).</div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <button id="sing-btn-cool" onclick="Game.buySingularity('cool')" class="action-btn btn-sing" style="${btnStyle}">${costCool} ТМ</button>
+                    <button id="sing-btn-max-cool" onclick="Game.buySingularity('cool', 'max')" class="action-btn btn-sing" style="${btnStyle}">MAX</button>
+                </div>
+            </div>`;
+        },
+        renderMarket() {
+            if(!this.isUnlocked('market')) {
+                document.getElementById('market-content').innerHTML = this.renderLocked('market', '1 Вакуумный Коллектор');
+                return;
+            }
+            // Ensure content div is correct
+            if(!document.getElementById('market-list')) {
+                // Rebuild structure if it was locked
+                document.getElementById('market-content').innerHTML = `
+                    <div class="list-container" id="market-list"></div>
+                    <div style="padding:15px; border-top:1px solid #333; margin-top:10px;">
+                        <h4 style="margin:0 0 10px 0; color:#fff; font-size:0.9em;">ЭКСПЕДИЦИИ</h4>
+                        <div style="font-size:0.8em; color:#888; margin-bottom:10px;">
+                            Награда рассчитывается от <b>базовой</b> добычи.
+                        </div>
+                        <div id="expedition-area">
+                            <button id="btn-start-exp" onclick="Game.startExpedition()" class="action-btn" style="width:100%; padding:10px;">ОТПРАВИТЬ ЗОНД (15 МИН)</button>
+                            <div id="expedition-status" class="expedition-status">
+                                <div style="color:var(--accent); font-weight:bold; margin-bottom:5px;">СТАТУС: В ПУТИ</div>
+                                <div style="font-size:0.9em; margin-bottom:10px;">Осталось: <span id="exp-timer">00:00</span></div>
+                                <button id="btn-claim-exp" onclick="Game.claimExpedition()" class="action-btn" style="width:100%; color:var(--success); border-color:var(--success);">ЗАБРАТЬ НАГРАДУ</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            const c = document.getElementById('market-list'); c.innerHTML = "";
+            CONFIG.marketOffers.forEach(o => {
+                c.innerHTML += `
+                <div class="shop-item" style="cursor:default; border-left:3px solid var(--market)">
+                    <div class="item-info">
+                        <div class="item-name" style="color:var(--market)">${o.name} <span class="buff-icon">${o.type.toUpperCase()}</span></div>
+                        <div class="item-desc">${o.desc}</div>
+                    </div>
+                    <button id="market-btn-${o.id}" onclick="Game.buyMarketBuff('${o.id}')" class="action-btn btn-market" style="width:auto;">...</button>
+                </div>`;
+            });
+        },
+        renderArts() {
+            const c = document.getElementById('artifacts-list'); c.innerHTML = "";
+            if(Game.data.inventory.length===0) c.innerHTML = "<div style='text-align:center;padding:20px;color:#555'>Артефакты отсутствуют. Ищите аномалии.</div>";
+            Game.data.inventory.forEach(id => {
+                const a = CONFIG.artifacts.find(x=>x.id===id);
+                c.innerHTML += `<div class="shop-item" style="cursor:default; border-left:3px solid gold"><div class="item-info"><div class="item-name">${a.name}</div><div class="item-desc" style="color:gold">${a.desc}</div></div></div>`;
+            });
+        },
+        renderQuests() {
+            const c = document.getElementById('quests-list'); 
+            if(c.children.length === Game.data.quests.length && c.innerHTML !== "") return;
+
+            c.innerHTML = "";
+            Game.data.quests.forEach((q, i) => {
+                const p = Math.min(100, (q.current/q.goal)*100);
+                const done = q.current >= q.goal;
+                const btn = done && !q.claimed ? `<button class="action-btn" style="width:100%; border-color:var(--success); color:var(--success);" onclick="Quests.claim(${i})">ЗАБРАТЬ</button>` : '';
+                
+                c.innerHTML += `
+                <div class="quest-card ${done&&!q.claimed?'ready':''} ${q.claimed?'done':''}" id="quest-card-${i}">
+                    <div class="quest-header">
+                        <span>${q.text}</span>
+                        <span><span id="q-curr-${i}" class="quest-curr">${this.fmtInt(q.current)}</span>/<span id="q-goal-${i}">${this.fmtInt(q.goal)}</span></span>
+                    </div>
+                    <div class="quest-reward-text">Награда: ${this.fmt(q.reward)} Эн</div>
+                    <div class="quest-bar"><div id="q-fill-${i}" class="quest-fill" style="width:${p}%"></div></div>
+                    <div id="q-btn-area-${i}" style="margin-top:10px">${btn}</div>
+                </div>`;
+            });
+        },
+        updateToggleButton() {
+            const btn = document.querySelector('.toggle-btn');
+            const isMobile = window.innerWidth <= 768;
+            if (this.collapsed) {
+                 // Panel is hidden
+                 btn.innerText = isMobile ? "▲" : "◀";
+            } else {
+                 // Panel is visible
+                 btn.innerText = isMobile ? "▼" : "▶";
+            }
+        },
+        togglePanel() {
+            this.collapsed = !this.collapsed;
+            const w = document.getElementById('game-wrapper');
+            if(this.collapsed) w.classList.add('collapsed-view'); 
+            else w.classList.remove('collapsed-view');
+            this.updateToggleButton();
+        },
+        tab(t) {
+            this.activeTab = t;
+            document.querySelectorAll('.panel-content').forEach(e=>e.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.add('active');
+            
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(e => e.classList.remove('active'));
+            
+            const activeTab = document.querySelector(`.tab-btn.t-${t === 'singularity' ? 'sing' : t}`);
+            if(activeTab) activeTab.classList.add('active');
+            
+            if(t === 'build') this.renderBuilds();
+            if(t === 'tech') this.renderTechs();
+            if(t === 'mega') this.renderMegas();
+            if(t === 'void') this.renderVoid();
+            if(t === 'singularity') this.renderSingularity();
+            if(t === 'quests') this.renderQuests();
+            if(t === 'arts') this.renderArts();
+            if(t === 'market') this.renderMarket();
+        },
+        log(m, t) {
+            const l = document.getElementById('game-log');
+            l.innerHTML += `<div class="log-msg ${t||''}">&gt; ${m}</div>`;
+            l.scrollTop = l.scrollHeight;
+        },
+        floatText(x, y, t, c) {
+            const d = document.createElement('div');
+            d.className='float-text'; d.innerText=t; d.style.color=c;
+            const rx = Math.random() * 20 - 10;
+            d.style.left=(x+10+rx)+'px'; d.style.top=(y-20)+'px';
+            document.body.appendChild(d);
+            setTimeout(()=>d.remove(), 1000);
+        },
+        toggleStats() {
+            const m = document.getElementById('stats-modal');
+            if(m.style.display==='flex') m.style.display='none';
+            else { m.style.display='flex'; this.updateStatsModal(); }
+        },
+        updateStatsModal() {
+            const b = document.getElementById('stats-body');
+            const uniqueArts = new Set(Game.data.inventory).size;
+            b.innerHTML = `
+                <div class="stat-row"><span>Всего Энергии:</span> <span style="color:#fff">${UI.fmt(Game.data.total)}</span></div>
+                <div class="stat-row"><span>Баланс ТМ:</span> <span style="color:var(--void-col)">${Game.data.dm}</span></div>
+                <div class="stat-row"><span>Множитель (Тек./Баз.):</span> <span style="color:var(--gold)">x${(Game.getTotalPPS() > 0 ? (Game.getTotalPPS()/Game.getRawPPS()) : 1).toFixed(2)}</span></div>
+                <div class="stat-row"><span>Вероятность крит. реакции:</span> <span style="color:var(--purple)">${(1 + (Game.data.voidLevels['v_crit']||0)*5 + Game.getArtCritBonus()).toFixed(1)}%</span></div>
+                <div class="stat-row"><span>Уникальных артефактов:</span> <span>${uniqueArts}/${CONFIG.artifacts.length}</span></div>
+            `;
+        }
+    };
+
+    const cvs = document.getElementById('starfield');
+    const ctx = cvs.getContext('2d');
+    let stars=[];
+    function rsz(){cvs.width=innerWidth;cvs.height=innerHeight; if(UI && typeof UI.updateToggleButton === 'function') UI.updateToggleButton();}
+    window.onresize=rsz; rsz();
+    for(let i=0;i<120;i++)stars.push({x:Math.random()*cvs.width,y:Math.random()*cvs.height,s:Math.random()*1.5});
+    function anim(){
+        ctx.clearRect(0,0,cvs.width,cvs.height); ctx.fillStyle="#fff";
+        stars.forEach(s=>{s.y+=s.s*0.15;if(s.y>cvs.height)s.y=0;ctx.globalAlpha=Math.random()*0.5+0.1;ctx.beginPath();ctx.arc(s.x,s.y,s.s,0,6.28);ctx.fill();});
+        requestAnimationFrame(anim);
+    }
+    anim();
+    Game.init();
+</script>
+</body>
+</html>
